@@ -5,15 +5,43 @@ import { IoCloseCircle } from "react-icons/io5";
 
 import { useState } from 'react';
 
+const BACKEND_URL = "http://127.0.0.1:5000";
+
+
 function App() {
   const [file, setFile] = useState(null);
+  const [result, setResult] = useState(null);
+
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (event) => {
     setFile(event.target.files[0]);
   };
 
-  const removeImage = () => {
-    setFile(null);
+  const detectTuberculosis = async () => {
+    setLoading(true);
+    console.log('Detecting Tuberculosis...');
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/predict`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setResult(data.result)
+      } else {
+        console.error('Failed to upload file');
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      setResult(null);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -55,23 +83,45 @@ function App() {
                 className='mt-2 border'
                 style={{ maxWidth: '100%', maxHeight: '300px' }}
               />
-              <IoCloseCircle onClick={removeImage} size={28} className='absolute right-6 top-8 -mt-8 -mr-8 text-red-500 cursor-pointer' />
+              <IoCloseCircle onClick={() => {
+                setFile(null)
+                setResult(null)
+              }} size={28} className='absolute right-6 top-8 -mt-8 -mr-8 text-red-500 cursor-pointer' />
             </div>
-            
+
           </div>
         )}
 
-        <div className='flex items-center justify-center pt-4'>
-          <button className='w-60 px-4 py-2 bg-red-500 text-white rounded-lg cursor-pointer'>
-            <span className='text-md font-bold'>DETECT</span>
-          </button>
+        {file && (
+          <div className='flex items-center justify-center pt-4'>
+            <button disabled={loading} onClick={detectTuberculosis} className='w-60 px-4 py-2 bg-red-500 text-white rounded-lg cursor-pointer'>
+              {!loading ? (
+                <span className='text-md font-bold'>DETECT</span>
+              ) :
+                (<span className='text-md font-bold'>DETECTING</span>)
+              }
+            </button>
           </div>
-          <h1 className="text-center text-lg font-bold pt-6 text-white/70">Your XRay results are <span className='text-red-500'>Positive</span> for Tuberculosis. Please consult a doctor for further diagnosis and treatment.
-        </h1>
-        <h1 className="text-center text-lg font-bold pt-6 text-white/70">Your XRay results are <span className='text-green-500'>Negative</span> for Tuberculosis. You are healthy and do not require further treatment.
-        </h1>
+        )}
+
+        {result !== null && (
+          <h1 className="text-center text-lg font-bold pt-6 text-white/70">
+            Your XRay results are{" "}
+            <span className={result === 1 ? "text-red-500" : "text-green-500"}>
+              {result === 1 ? "Positive" : "Negative"}
+            </span>{" "}
+            for Tuberculosis.{" "}
+            {result === 1 ? (
+              "Please consult a doctor for further diagnosis and treatment."
+            ) : (
+              "You are healthy and do not require further treatment."
+            )}
+          </h1>
+        )}
+
 
       </div>
+
     </div>
   );
 }
